@@ -1,0 +1,19 @@
+[package]
+name = "AutoZeroFrameAction"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dirs = "6.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+slint = "1.14.1"
+rdev = "0.5.3"
+opencv = { version = "0.98.1", default-features = false, features = [
+    "imgcodecs",
+    "imgproc",
+] }
+
+
+[build-dependencies]
+slint-build = "1.14.1"
