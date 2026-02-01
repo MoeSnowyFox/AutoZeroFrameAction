@@ -2,18 +2,95 @@
 name = "AutoZeroFrameAction"
 version = "0.1.0"
 edition = "2021"
+description = "明日方舟智能鼠标宏 - 基于 Rust + Slint + OpenCV 的桌面应用程序"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT"
+
+[lib]
+name = "auto_zero_frame_action"
+path = "src/lib.rs"
+
+[[bin]]
+name = "AutoZeroFrameAction"
+path = "src/main.rs"
+
+[[example]]
+name = "error_demo"
+path = "examples/error_demo.rs"
+
+[[example]]
+name = "window_service_demo"
+path = "examples/window_service_demo.rs"
+
+[[example]]
+name = "state_manager_demo"
+path = "examples/state_manager_demo.rs"
+
+[[bin]]
+name = "test_simple_slint"
+path = "test_simple_slint.rs"
+
+[[bin]]
+name = "test_minimal_main"
+path = "test_minimal_main.rs"
 
 [dependencies]
-dirs = "6.0.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+# UI Framework
 slint = "1.14.1"
-rdev = "0.5.3"
+
+# Computer Vision
 opencv = { version = "0.98.1", default-features = false, features = [
     "imgcodecs",
     "imgproc",
 ] }
 
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.9"
+
+# Async Runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Error Handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# System Integration
+rdev = "0.5.3"
+winapi = { version = "0.3", features = [
+    "winuser",
+    "wingdi",
+    "windef",
+    "minwindef",
+    "libloaderapi",
+    "processthreadsapi",
+    "handleapi",
+    "securitybaseapi",
+    "psapi",
+] }
+
+# Utilities
+dirs = "6.0.0"
+crossbeam-channel = "0.5"
+log = "0.4"
+env_logger = "0.11"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3.8"
 
 [build-dependencies]
 slint-build = "1.14.1"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Threading",
+] }
+
+[target.'cfg(not(windows))'.dependencies]
+libc = "0.2"

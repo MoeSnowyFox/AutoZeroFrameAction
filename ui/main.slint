@@ -1,0 +1,1069 @@
+﻿import {
+    Button,
+    VerticalBox,
+    HorizontalBox,
+    GroupBox,
+    ComboBox,
+    CheckBox,
+    Slider,
+    LineEdit,
+    ScrollView,
+} from "std-widgets.slint";
+
+export global ThemeColors {
+    // Windows 11 风格颜色
+    out property <color> background: #f3f3f3;
+    out property <color> surface: #ffffff;
+    out property <color> card: #ffffff;
+    out property <color> text-primary: #323130;
+    out property <color> text-secondary: #605e5c;
+    out property <color> border: #d1d1d1;
+    out property <color> accent: #0078d4;
+    out property <color> success: #107c10;
+    out property <color> error: #d13438;
+    out property <color> warning: #ff8c00;
+    // 云母效果相关
+    out property <color> mica-base: #f9f9f9e6;
+    out property <color> mica-alt: #ededede6;
+    out property <color> card-stroke: #0000000f;
+}
+
+export global AppState {
+    in-out property <bool> is-running: false;
+    in-out property <string> status-text: "Ready";
+    in-out property <int> current-mode: 0;
+    in-out property <bool> show-notification: false;
+    in-out property <string> notification-text: "";
+    in-out property <string> notification-type: "info"; // "info", "warning", "error"
+    // 按键检测状态
+    in-out property <bool> is-detecting-key: false;
+    in-out property <string> detecting-for: ""; // 正在检测哪个按键配置
+}
+
+export global MacroConfig {
+    in-out property <string> deploy-operator: "1,2,3,4,5,6,7,8,9,0,-,=";
+    in-out property <string> activate-skill: "Q,W,E,R,T,Y,U,I,O,P";
+    in-out property <string> retreat-operator: "A,S,D,F,G,H,J,K,L";
+    in-out property <string> focus-view: "Space";
+    in-out property <string> pause-game: "Esc";
+    in-out property <bool> show-overlay: false;
+    in-out property <int> overlay-display-mode: 0;
+    in-out property <int> overlay-opacity: 80;
+    in-out property <bool> battle-only: true;
+}
+
+export global SmartConfig {
+    in-out property <string> deploy-operator: "1,2,3,4,5,6,7,8,9,0,-,=";
+    in-out property <string> activate-skill: "Q,W,E,R,T,Y,U,I,O,P";
+    in-out property <string> retreat-operator: "A,S,D,F,G,H,J,K,L";
+    in-out property <string> focus-view: "Space";
+    in-out property <string> pause-game: "Esc";
+    in-out property <bool> show-overlay: false;
+    in-out property <int> overlay-display-mode: 0;
+    in-out property <int> overlay-opacity: 80;
+    in-out property <bool> allow-number-select: true;
+    in-out property <bool> auto-retreat: false;
+    in-out property <bool> skill-timing: true;
+}
+
+export global GameConfig {
+    in-out property <string> game-deploy: "1";
+    in-out property <string> game-skill: "Q";
+    in-out property <string> game-retreat: "A";
+    in-out property <string> game-pause: "Esc";
+    in-out property <string> game-speed-up: "2";
+    in-out property <string> game-view-left: "Left";
+    in-out property <string> game-view-right: "Right";
+    in-out property <string> game-view-reset: "Space";
+    in-out property <bool> auto-start: false;
+}
+
+export global AppSettings {
+    in-out property <bool> minimize-to-tray: true;
+    in-out property <bool> start-with-windows: false;
+    in-out property <bool> auto-check-updates: true;
+    in-out property <string> language: "zh-CN";
+    in-out property <string> theme: "light";
+}
+
+component Card inherits Rectangle {
+    background: ThemeColors.mica-base;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: ThemeColors.card-stroke;
+    drop-shadow-blur: 16px;
+    drop-shadow-color: #00000008;
+    drop-shadow-offset-y: 2px;
+}
+
+component ModeButton inherits Rectangle {
+    in property <bool> active: false;
+    in property <string> label: "";
+    width: 100px;
+    height: 32px;
+    background: active ? ThemeColors.accent : ThemeColors.surface;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: active ? ThemeColors.accent : ThemeColors.border;
+    drop-shadow-blur: active ? 8px : 2px;
+    drop-shadow-color: active ? #0078d420 : #00000008;
+    drop-shadow-offset-y: 1px;
+    Text {
+        text: label;
+        color: active ? #ffffff : ThemeColors.text-primary;
+        font-size: 12px;
+        font-weight: active ? 600 : 400;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+component KeyConfigGroup inherits VerticalBox {
+    in property <string> label: "";
+    in property <string> value: "";
+    in property <string> config-key: ""; // 用于标识这是哪个配置项
+    callback edited(string);
+    callback start-key-detection(string);
+    spacing: 4px;
+    Text {
+        text: label;
+        color: ThemeColors.text-primary;
+        font-size: 12px;
+        font-weight: 500;
+        height: 16px;
+    }
+
+    Rectangle {
+        height: 32px;
+        background: AppState.is-detecting-key && AppState.detecting-for == config-key ? ThemeColors.accent : ThemeColors.surface;
+        border-radius: 4px;
+        border-width: 1px;
+        border-color: AppState.is-detecting-key && AppState.detecting-for == config-key ? ThemeColors.accent : ThemeColors.border;
+        drop-shadow-blur: 2px;
+        drop-shadow-color: #00000008;
+        drop-shadow-offset-y: 1px;
+        HorizontalBox {
+            padding: 8px;
+            spacing: 8px;
+            alignment: space-between;
+            Text {
+                text: AppState.is-detecting-key && AppState.detecting-for == config-key ? "按下按键..." : value;
+                color: AppState.is-detecting-key && AppState.detecting-for == config-key ? #ffffff : ThemeColors.text-primary;
+                font-size: 11px;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+
+            Rectangle {
+                width: 24px;
+                height: 20px;
+                background: AppState.is-detecting-key && AppState.detecting-for == config-key ? #ffffff20 : ThemeColors.accent;
+                border-radius: 3px;
+                Text {
+                    text: "⌨";
+                    color: #ffffff;
+                    font-size: 10px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        TouchArea {
+            clicked => {
+                if (!AppState.is-detecting-key) {
+                    start-key-detection(config-key);
+                }
+            }
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    title: "划火柴小助手";
+    min-width: 900px;
+    min-height: 650px;
+    background: ThemeColors.background;
+
+    callback start-clicked();
+    callback stop-clicked();
+    callback mode-changed(int);
+    callback settings-clicked();
+    callback show-log();
+    callback save-config();
+    callback start-key-detection(string);
+    callback key-detected(string, string);
+    callback macro-deploy-changed(string);
+    callback macro-skill-changed(string);
+    callback macro-retreat-changed(string);
+    callback macro-focus-changed(string);
+    callback macro-pause-changed(string);
+    callback macro-overlay-changed(bool);
+    callback macro-overlay-mode-changed(int);
+    callback macro-overlay-opacity-changed(int);
+    callback macro-battle-only-changed(bool);
+    callback smart-deploy-changed(string);
+    callback smart-skill-changed(string);
+    callback smart-retreat-changed(string);
+    callback smart-focus-changed(string);
+    callback smart-pause-changed(string);
+    callback smart-overlay-changed(bool);
+    callback smart-overlay-mode-changed(int);
+    callback smart-overlay-opacity-changed(int);
+    callback smart-feature-changed(string, bool);
+    callback game-config-changed(string, string);
+    callback auto-start-changed(bool);
+    callback app-settings-changed(string, string);
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 12px;
+
+        // 顶部控制栏 - 修复对齐问题
+        Card {
+            height: 64px;
+            HorizontalBox {
+                padding: 16px;
+                alignment: space-between;
+                
+                // 左侧标题和状态 - 修复对齐
+                HorizontalBox {
+                    spacing: 12px;
+                    alignment: start;
+                    Text {
+                        text: "明日方舟智能助手";
+                        color: ThemeColors.text-primary;
+                        font-size: 16px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                        height: 32px;
+                    }
+
+                    Rectangle {
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 4px;
+                        background: AppState.is-running ? ThemeColors.success : ThemeColors.text-secondary;
+                        y: 12px; // 手动调整垂直位置
+                    }
+
+                    Text {
+                        text: AppState.status-text;
+                        color: AppState.is-running ? ThemeColors.success : ThemeColors.text-secondary;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                        height: 32px;
+                    }
+                }
+
+                // 右侧按钮
+                HorizontalBox {
+                    spacing: 8px;
+                    alignment: end;
+                    Button {
+                        text: AppState.is-running ? "停止" : "启动";
+                        primary: !AppState.is-running;
+                        width: 80px;
+                        height: 32px;
+                        clicked => {
+                            if (AppState.is-running) {
+                                stop-clicked();
+                            } else {
+                                start-clicked();
+                            }
+                        }
+                    }
+
+                    Button {
+                        text: "设置";
+                        width: 60px;
+                        height: 32px;
+                        clicked => {
+                            settings-clicked();
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 12px;
+
+            // 左侧模式选择 - 运行模式在上方居中
+            Card {
+                width: 140px;
+                VerticalBox {
+                    padding: 12px;
+                    spacing: 12px;
+                    alignment: start;
+                    Text {
+                        text: "运行模式";
+                        color: ThemeColors.text-primary;
+                        font-size: 13px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        height: 20px;
+                    }
+
+                    VerticalBox {
+                        spacing: 8px;
+                        alignment: center;
+                        ModeButton {
+                            active: AppState.current-mode == 0;
+                            label: "宏模式";
+                            TouchArea {
+                                clicked => {
+                                    AppState.current-mode = 0;
+                                    mode-changed(0);
+                                }
+                            }
+                        }
+
+                        ModeButton {
+                            active: AppState.current-mode == 1;
+                            label: "智能模式";
+                            TouchArea {
+                                clicked => {
+                                    AppState.current-mode = 1;
+                                    mode-changed(1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 右侧配置面板 - 添加滚动视图
+            Card {
+                ScrollView {
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 16px;
+
+                        // 宏模式配置
+                        if AppState.current-mode == 0: VerticalBox {
+                            spacing: 12px;
+                            Text {
+                                text: "宏模式配置";
+                                color: ThemeColors.text-primary;
+                                font-size: 15px;
+                                font-weight: 600;
+                                height: 24px;
+                            }
+                            
+                            // 按键配置 - 紧凑布局
+                            GroupBox {
+                                title: "按键配置";
+                                VerticalBox {
+                                    padding: 8px;
+                                    spacing: 6px;
+                                    
+                                    // 两列布局提高信息密度
+                                    HorizontalBox {
+                                        spacing: 12px;
+                                        VerticalBox {
+                                            spacing: 6px;
+                                            KeyConfigGroup {
+                                                label: "拖出干员";
+                                                value: MacroConfig.deploy-operator;
+                                                config-key: "macro-deploy";
+                                                edited(t) => {
+                                                    MacroConfig.deploy-operator = t;
+                                                    macro-deploy-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "开启技能";
+                                                value: MacroConfig.activate-skill;
+                                                config-key: "macro-skill";
+                                                edited(t) => {
+                                                    MacroConfig.activate-skill = t;
+                                                    macro-skill-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "撤退干员";
+                                                value: MacroConfig.retreat-operator;
+                                                config-key: "macro-retreat";
+                                                edited(t) => {
+                                                    MacroConfig.retreat-operator = t;
+                                                    macro-retreat-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+                                        }
+
+                                        VerticalBox {
+                                            spacing: 6px;
+                                            KeyConfigGroup {
+                                                label: "视角聚焦";
+                                                value: MacroConfig.focus-view;
+                                                config-key: "macro-focus";
+                                                edited(t) => {
+                                                    MacroConfig.focus-view = t;
+                                                    macro-focus-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "暂停游戏";
+                                                value: MacroConfig.pause-game;
+                                                config-key: "macro-pause";
+                                                edited(t) => {
+                                                    MacroConfig.pause-game = t;
+                                                    macro-pause-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // 悬浮窗设置 - 与智能模式保持一致
+                            GroupBox {
+                                title: "悬浮窗设置";
+                                VerticalBox {
+                                    padding: 8px;
+                                    spacing: 8px;
+                                    CheckBox {
+                                        text: "显示按键悬浮窗";
+                                        checked: MacroConfig.show-overlay;
+                                        toggled => {
+                                            MacroConfig.show-overlay = self.checked;
+                                            macro-overlay-changed(self.checked);
+                                        }
+                                    }
+
+                                    if MacroConfig.show-overlay: VerticalBox {
+                                        spacing: 8px;
+                                        HorizontalBox {
+                                            spacing: 12px;
+                                            VerticalBox {
+                                                spacing: 4px;
+                                                Text {
+                                                    text: "显示模式";
+                                                    color: ThemeColors.text-primary;
+                                                    font-size: 12px;
+                                                    font-weight: 500;
+                                                    height: 16px;
+                                                }
+
+                                                ComboBox {
+                                                    model: ["总是显示", "前台显示", "程序上层"];
+                                                    current-index: MacroConfig.overlay-display-mode;
+                                                    selected(value) => {
+                                                        if (value == "总是显示") {
+                                                            MacroConfig.overlay-display-mode = 0;
+                                                            macro-overlay-mode-changed(0);
+                                                        } else if (value == "前台显示") {
+                                                            MacroConfig.overlay-display-mode = 1;
+                                                            macro-overlay-mode-changed(1);
+                                                        } else {
+                                                            MacroConfig.overlay-display-mode = 2;
+                                                            macro-overlay-mode-changed(2);
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            VerticalBox {
+                                                spacing: 4px;
+                                                Text {
+                                                    text: "透明度 " + MacroConfig.overlay-opacity + "%";
+                                                    color: ThemeColors.text-primary;
+                                                    font-size: 12px;
+                                                    font-weight: 500;
+                                                    height: 16px;
+                                                }
+
+                                                Slider {
+                                                    minimum: 0;
+                                                    maximum: 100;
+                                                    value: MacroConfig.overlay-opacity;
+                                                    changed(v) => {
+                                                        MacroConfig.overlay-opacity = round(v);
+                                                        macro-overlay-opacity-changed(round(v));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // 状态识别
+                            GroupBox {
+                                title: "状态识别";
+                                VerticalBox {
+                                    padding: 8px;
+                                    CheckBox {
+                                        text: "仅在战斗时开启宏";
+                                        checked: MacroConfig.battle-only;
+                                        toggled => {
+                                            MacroConfig.battle-only = self.checked;
+                                            macro-battle-only-changed(self.checked);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 智能模式配置
+                        if AppState.current-mode == 1: VerticalBox {
+                            spacing: 12px;
+                            Text {
+                                text: "智能模式配置";
+                                color: ThemeColors.text-primary;
+                                font-size: 15px;
+                                font-weight: 600;
+                                height: 24px;
+                            }
+                            
+                            // 按键配置 - 紧凑布局
+                            GroupBox {
+                                title: "按键配置";
+                                VerticalBox {
+                                    padding: 8px;
+                                    spacing: 6px;
+                                    HorizontalBox {
+                                        spacing: 12px;
+                                        VerticalBox {
+                                            spacing: 6px;
+                                            KeyConfigGroup {
+                                                label: "拖出干员";
+                                                value: SmartConfig.deploy-operator;
+                                                config-key: "smart-deploy";
+                                                edited(t) => {
+                                                    SmartConfig.deploy-operator = t;
+                                                    smart-deploy-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "开启技能";
+                                                value: SmartConfig.activate-skill;
+                                                config-key: "smart-skill";
+                                                edited(t) => {
+                                                    SmartConfig.activate-skill = t;
+                                                    smart-skill-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "撤退干员";
+                                                value: SmartConfig.retreat-operator;
+                                                config-key: "smart-retreat";
+                                                edited(t) => {
+                                                    SmartConfig.retreat-operator = t;
+                                                    smart-retreat-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+                                        }
+
+                                        VerticalBox {
+                                            spacing: 6px;
+                                            KeyConfigGroup {
+                                                label: "视角聚焦";
+                                                value: SmartConfig.focus-view;
+                                                config-key: "smart-focus";
+                                                edited(t) => {
+                                                    SmartConfig.focus-view = t;
+                                                    smart-focus-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "暂停游戏";
+                                                value: SmartConfig.pause-game;
+                                                config-key: "smart-pause";
+                                                edited(t) => {
+                                                    SmartConfig.pause-game = t;
+                                                    smart-pause-changed(t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // 悬浮窗设置 - 与宏模式保持一致
+                            GroupBox {
+                                title: "悬浮窗设置";
+                                VerticalBox {
+                                    padding: 8px;
+                                    spacing: 8px;
+                                    CheckBox {
+                                        text: "显示按键悬浮窗";
+                                        checked: SmartConfig.show-overlay;
+                                        toggled => {
+                                            SmartConfig.show-overlay = self.checked;
+                                            smart-overlay-changed(self.checked);
+                                        }
+                                    }
+
+                                    if SmartConfig.show-overlay: VerticalBox {
+                                        spacing: 8px;
+                                        HorizontalBox {
+                                            spacing: 12px;
+                                            VerticalBox {
+                                                spacing: 4px;
+                                                Text {
+                                                    text: "显示模式";
+                                                    color: ThemeColors.text-primary;
+                                                    font-size: 12px;
+                                                    font-weight: 500;
+                                                    height: 16px;
+                                                }
+
+                                                ComboBox {
+                                                    model: ["总是显示", "前台显示", "程序上层"];
+                                                    current-index: SmartConfig.overlay-display-mode;
+                                                    selected(value) => {
+                                                        if (value == "总是显示") {
+                                                            SmartConfig.overlay-display-mode = 0;
+                                                            smart-overlay-mode-changed(0);
+                                                        } else if (value == "前台显示") {
+                                                            SmartConfig.overlay-display-mode = 1;
+                                                            smart-overlay-mode-changed(1);
+                                                        } else {
+                                                            SmartConfig.overlay-display-mode = 2;
+                                                            smart-overlay-mode-changed(2);
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            VerticalBox {
+                                                spacing: 4px;
+                                                Text {
+                                                    text: "透明度 " + SmartConfig.overlay-opacity + "%";
+                                                    color: ThemeColors.text-primary;
+                                                    font-size: 12px;
+                                                    font-weight: 500;
+                                                    height: 16px;
+                                                }
+
+                                                Slider {
+                                                    minimum: 0;
+                                                    maximum: 100;
+                                                    value: SmartConfig.overlay-opacity;
+                                                    changed(v) => {
+                                                        SmartConfig.overlay-opacity = round(v);
+                                                        smart-overlay-opacity-changed(round(v));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // 功能选择 - 紧凑布局
+                            GroupBox {
+                                title: "功能选择";
+                                VerticalBox {
+                                    padding: 8px;
+                                    spacing: 6px;
+                                    CheckBox {
+                                        text: "允许使用小数字选择干员";
+                                        checked: SmartConfig.allow-number-select;
+                                        toggled => {
+                                            SmartConfig.allow-number-select = self.checked;
+                                            smart-feature-changed("allow-number-select", self.checked);
+                                        }
+                                    }
+
+                                    CheckBox {
+                                        text: "自动撤退功能";
+                                        checked: SmartConfig.auto-retreat;
+                                        toggled => {
+                                            SmartConfig.auto-retreat = self.checked;
+                                            smart-feature-changed("auto-retreat", self.checked);
+                                        }
+                                    }
+
+                                    CheckBox {
+                                        text: "技能时机优化";
+                                        checked: SmartConfig.skill-timing;
+                                        toggled => {
+                                            SmartConfig.skill-timing = self.checked;
+                                            smart-feature-changed("skill-timing", self.checked);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 程序设置（两种模式都显示）- 紧凑布局
+                        GroupBox {
+                            title: "程序设置";
+                            VerticalBox {
+                                padding: 8px;
+                                spacing: 12px;
+                                
+                                // 游戏内按键配置
+                                VerticalBox {
+                                    spacing: 6px;
+                                    Text {
+                                        text: "游戏内按键配置";
+                                        color: ThemeColors.text-primary;
+                                        font-size: 13px;
+                                        font-weight: 600;
+                                        height: 20px;
+                                    }
+
+                                    HorizontalBox {
+                                        spacing: 12px;
+                                        VerticalBox {
+                                            spacing: 6px;
+                                            KeyConfigGroup {
+                                                label: "部署";
+                                                value: GameConfig.game-deploy;
+                                                config-key: "game-deploy";
+                                                edited(t) => {
+                                                    GameConfig.game-deploy = t;
+                                                    game-config-changed("deploy", t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "技能";
+                                                value: GameConfig.game-skill;
+                                                config-key: "game-skill";
+                                                edited(t) => {
+                                                    GameConfig.game-skill = t;
+                                                    game-config-changed("skill", t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "撤退";
+                                                value: GameConfig.game-retreat;
+                                                config-key: "game-retreat";
+                                                edited(t) => {
+                                                    GameConfig.game-retreat = t;
+                                                    game-config-changed("retreat", t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "暂停";
+                                                value: GameConfig.game-pause;
+                                                config-key: "game-pause";
+                                                edited(t) => {
+                                                    GameConfig.game-pause = t;
+                                                    game-config-changed("pause", t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+                                        }
+
+                                        VerticalBox {
+                                            spacing: 6px;
+                                            KeyConfigGroup {
+                                                label: "二倍速";
+                                                value: GameConfig.game-speed-up;
+                                                config-key: "game-speed-up";
+                                                edited(t) => {
+                                                    GameConfig.game-speed-up = t;
+                                                    game-config-changed("speed-up", t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "视角左移";
+                                                value: GameConfig.game-view-left;
+                                                config-key: "game-view-left";
+                                                edited(t) => {
+                                                    GameConfig.game-view-left = t;
+                                                    game-config-changed("view-left", t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "视角右移";
+                                                value: GameConfig.game-view-right;
+                                                config-key: "game-view-right";
+                                                edited(t) => {
+                                                    GameConfig.game-view-right = t;
+                                                    game-config-changed("view-right", t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+
+                                            KeyConfigGroup {
+                                                label: "视角重置";
+                                                value: GameConfig.game-view-reset;
+                                                config-key: "game-view-reset";
+                                                edited(t) => {
+                                                    GameConfig.game-view-reset = t;
+                                                    game-config-changed("view-reset", t);
+                                                }
+                                                start-key-detection(key) => {
+                                                    start-key-detection(key);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // 其他设置
+                                VerticalBox {
+                                    spacing: 8px;
+                                    CheckBox {
+                                        text: "启动程序后立即运行";
+                                        checked: GameConfig.auto-start;
+                                        toggled => {
+                                            GameConfig.auto-start = self.checked;
+                                            auto-start-changed(self.checked);
+                                        }
+                                    }
+
+                                    HorizontalBox {
+                                        spacing: 12px;
+                                        Button {
+                                            text: "保存配置";
+                                            primary: true;
+                                            clicked => {
+                                                save-config();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 软件设置 - 独立于运行模式
+                        GroupBox {
+                            title: "软件设置";
+                            VerticalBox {
+                                padding: 8px;
+                                spacing: 8px;
+                                CheckBox {
+                                    text: "最小化到系统托盘";
+                                    checked: AppSettings.minimize-to-tray;
+                                    toggled => {
+                                        AppSettings.minimize-to-tray = self.checked;
+                                        app-settings-changed("minimize-to-tray", self.checked ? "true" : "false");
+                                    }
+                                }
+
+                                CheckBox {
+                                    text: "开机自启动";
+                                    checked: AppSettings.start-with-windows;
+                                    toggled => {
+                                        AppSettings.start-with-windows = self.checked;
+                                        app-settings-changed("start-with-windows", self.checked ? "true" : "false");
+                                    }
+                                }
+
+                                CheckBox {
+                                    text: "自动检查更新";
+                                    checked: AppSettings.auto-check-updates;
+                                    toggled => {
+                                        AppSettings.auto-check-updates = self.checked;
+                                        app-settings-changed("auto-check-updates", self.checked ? "true" : "false");
+                                    }
+                                }
+
+                                HorizontalBox {
+                                    spacing: 12px;
+                                    VerticalBox {
+                                        spacing: 4px;
+                                        Text {
+                                            text: "界面语言";
+                                            color: ThemeColors.text-primary;
+                                            font-size: 12px;
+                                            font-weight: 500;
+                                            height: 16px;
+                                        }
+
+                                        ComboBox {
+                                            model: ["简体中文", "繁体中文", "English"];
+                                            current-index: AppSettings.language == "zh-CN" ? 0 : (AppSettings.language == "zh-TW" ? 1 : 2);
+                                            selected(value) => {
+                                                if (value == "简体中文") {
+                                                    AppSettings.language = "zh-CN";
+                                                    app-settings-changed("language", "zh-CN");
+                                                } else if (value == "繁体中文") {
+                                                    AppSettings.language = "zh-TW";
+                                                    app-settings-changed("language", "zh-TW");
+                                                } else {
+                                                    AppSettings.language = "en-US";
+                                                    app-settings-changed("language", "en-US");
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    VerticalBox {
+                                        spacing: 4px;
+                                        Text {
+                                            text: "界面主题";
+                                            color: ThemeColors.text-primary;
+                                            font-size: 12px;
+                                            font-weight: 500;
+                                            height: 16px;
+                                        }
+
+                                        ComboBox {
+                                            model: ["浅色", "深色", "跟随系统"];
+                                            current-index: AppSettings.theme == "light" ? 0 : (AppSettings.theme == "dark" ? 1 : 2);
+                                            selected(value) => {
+                                                if (value == "浅色") {
+                                                    AppSettings.theme = "light";
+                                                    app-settings-changed("theme", "light");
+                                                } else if (value == "深色") {
+                                                    AppSettings.theme = "dark";
+                                                    app-settings-changed("theme", "dark");
+                                                } else {
+                                                    AppSettings.theme = "auto";
+                                                    app-settings-changed("theme", "auto");
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 自动弹出通知（仅特殊日志）- Windows 风格
+    if AppState.show-notification: Rectangle {
+        x: parent.width - self.width - 20px;
+        y: 80px;
+        width: 320px;
+        height: notification-content.preferred-height + 32px;
+        background: ThemeColors.mica-base;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: AppState.notification-type == "error" ? ThemeColors.error : (AppState.notification-type == "warning" ? ThemeColors.warning : ThemeColors.accent);
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000020;
+        drop-shadow-offset-y: 4px;
+        notification-content := VerticalBox {
+            padding: 16px;
+            spacing: 8px;
+            HorizontalBox {
+                alignment: space-between;
+                HorizontalBox {
+                    spacing: 8px;
+                    Rectangle {
+                        width: 16px;
+                        height: 16px;
+                        background: AppState.notification-type == "error" ? ThemeColors.error : (AppState.notification-type == "warning" ? ThemeColors.warning : ThemeColors.accent);
+                        border-radius: 8px;
+                        Text {
+                            text: AppState.notification-type == "error" ? "!" : (AppState.notification-type == "warning" ? "⚠" : "ℹ");
+                            color: #ffffff;
+                            font-size: 10px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Text {
+                        text: AppState.notification-type == "error" ? "错误" : (AppState.notification-type == "warning" ? "警告" : "提示");
+                        color: ThemeColors.text-primary;
+                        font-size: 14px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    background: ThemeColors.surface;
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: ThemeColors.border;
+                    Text {
+                        text: "×";
+                        color: ThemeColors.text-secondary;
+                        font-size: 14px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    TouchArea {
+                        clicked => {
+                            AppState.show-notification = false;
+                        }
+                    }
+                }
+            }
+
+            Text {
+                text: AppState.notification-text;
+                color: ThemeColors.text-secondary;
+                font-size: 12px;
+                wrap: word-wrap;
+            }
+        }
+
+        // 自动隐藏定时器
+        Timer {
+            interval: 5000ms;
+            running: AppState.show-notification;
+            triggered => {
+                AppState.show-notification = false;
+            }
+        }
+    }
+}

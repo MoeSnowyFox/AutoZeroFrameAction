@@ -1,21 +1,33 @@
-mod config;
+//! 明日方舟智能鼠标宏
+//!
+//! 基于 Rust + Slint + OpenCV 技术栈的桌面应用程序
+//! 支持宏模式和智能模式两种工作方式
 
-slint::include_modules!();
+mod models;
+mod services;
+mod ui;
+mod utils;
 
-fn main() -> Result<(), slint::PlatformError> {
-    // 创建窗口实例
-    let ui = AppWindow::new()?;
-    
-    // 设置按钮点击的回调函数
-    ui.on_button_clicked({
-        move || {
-            println!("按钮被点击了！");
-        }
-    });
-    
-    // 显示窗口
-    ui.show()?;
-    
-    // 运行事件循环 - 这会让窗口保持打开状态并响应用户交互
-    slint::run_event_loop()
+use ui::MainAppBuilder;
+use utils::AppResult;
+
+#[tokio::main]
+async fn main() -> AppResult<()> {
+    // 初始化日志系统
+    env_logger::init();
+
+    log::info!("正在启动明日方舟智能鼠标宏应用程序...");
+
+    // 创建并运行应用程序
+    let mut app = MainAppBuilder::new()
+        .with_logging(false) // 已经初始化过了
+        .build()?;
+
+    log::info!("应用程序初始化完成，启动主循环");
+
+    // 运行应用程序
+    app.run().await?;
+
+    log::info!("应用程序正常退出");
+    Ok(())
 }
